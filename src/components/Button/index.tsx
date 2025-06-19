@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { ButtonHTMLAttributes } from 'react';
 import styled from 'styled-components';
 
-type Props = {
+type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   label: string;
-  onClick: () => void;
   isDisabled?: boolean;
 };
 

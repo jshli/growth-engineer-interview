@@ -29,3 +29,10 @@ export type ConvertResponse = {
   amount: number;
   convertedAmount: number;
 };
+
+// Global declarations for third-party libraries
+declare global {
+  interface Window {
+    gtag: (command: string, targetId: string, config?: Record<string, any>) => void;
+  }
+}
