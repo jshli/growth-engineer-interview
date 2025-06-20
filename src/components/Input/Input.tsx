@@ -1,10 +1,11 @@
 import React, { InputHTMLAttributes } from 'react';
 import styled from 'styled-components';
+import { CurrencyCodes } from '../../types';
 
-type InputProps = InputHTMLAttributes<HTMLInputElement> & {
+type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> & {
   // would definitely question when there would ever be a form without a label
   label?: string;
-  onChange: (val: string) => void;
+  onChange: (val: CurrencyCodes) => void;
   error?: string;
   value?: string;
 };
@@ -19,7 +20,13 @@ const Input: React.FC<InputProps> = ({ label, onChange, value, error, ...props }
   return (
     <Container>
       {label && <StyledLabel htmlFor={inputId}>{label}</StyledLabel>}
-      <StyledInput id={inputId} onChange={(e) => onChange(e.target.value)} value={value} aria-invalid={!!error} {...props} />
+      <StyledInput
+        id={inputId}
+        onChange={(e) => onChange(e.target.value as CurrencyCodes)}
+        value={value}
+        aria-invalid={!!error}
+        {...props}
+      />
       {error && <StyledErrorMessage role="alert">{error}</StyledErrorMessage>}
     </Container>
   );

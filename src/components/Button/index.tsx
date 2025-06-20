@@ -3,6 +3,7 @@ import styled from 'styled-components';
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   label: string;
+  // this is redundant
   isDisabled?: boolean;
 };
 

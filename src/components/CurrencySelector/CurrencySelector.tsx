@@ -2,10 +2,10 @@ import { SelectHTMLAttributes } from 'react';
 import styled from 'styled-components';
 import { Currencies, CurrencyCodes } from '../../types';
 
-type Props = SelectHTMLAttributes<HTMLSelectElement> & {
+type Props = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'onChange'> & {
   label: string;
   onChange: (value: CurrencyCodes) => void;
-  value: CurrencyCodes;
+  value: '' | CurrencyCodes;
   error?: string;
 };
 

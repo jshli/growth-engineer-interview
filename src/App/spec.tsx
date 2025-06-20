@@ -72,6 +72,38 @@ describe('<App />', () => {
       expect(screen.getByTestId('converted-amount').textContent).toBe('200');
     });
   });
+  it('fires a GA4 event with the correct properties on successful conversion', async () => {
+    const mockFetch = jest.fn();
+    global.fetch = mockFetch;
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve<ConvertResponse>({
+          from: 'AUD',
+          to: 'USD',
+          amount: 100,
+          convertedAmount: '200',
+        }),
+    });
+    const mockGtag = jest.fn();
+    (window as any).gtag = mockGtag;
+
+    render(<App />);
+    await userEvent.type(screen.getByLabelText('Amount'), '100');
+    await userEvent.selectOptions(screen.getByLabelText('From Currency'), 'USD');
+    await userEvent.selectOptions(screen.getByLabelText('To Currency'), 'AUD');
+    userEvent.click(screen.getByRole('button', { name: 'Convert' }));
+    await waitFor(() => {
+      expect(mockGtag).toHaveBeenCalledWith('event', 'ConvertButton', {
+        event_category: 'CurrencyConverter',
+        event_label: 'ConvertButton',
+        currency_from: 'USD',
+        currency_to: 'AUD',
+        amount: '100',
+        converted_amount: 200,
+      });
+    });
+  });
   it('does not fire the fetch if the amount is not filled in', async () => {
     const mockFetch = jest.fn();
     global.fetch = mockFetch;

@@ -7,19 +7,30 @@ import { palette } from '../styles';
 import Button from '../components/Button';
 import { ConvertResponse, Currencies, CurrencyCodes } from '../types';
 import { CurrencySelector } from '../components/CurrencySelector/CurrencySelector';
+import { useAnalytics } from '../hooks/useAnalytics';
+
+declare global {
+  interface Window {
+    gtag: (command: string, targetId: string, config?: Record<string, any>) => void;
+  }
+}
 
 function App() {
   const [amount, setAmount] = useState('');
-  const [fromCurrency, setFromCurrency] = useState<undefined | CurrencyCodes>(undefined);
-  const [toCurrency, setToCurrency] = useState<undefined | CurrencyCodes>(undefined);
+
+  // maybe talk about grouping these into one object. Otherwise I don't think it's too bad
+  // talk about abstraction - how at this point, it's not needed
+  const [fromCurrency, setFromCurrency] = useState<'' | CurrencyCodes>('');
+  const [toCurrency, setToCurrency] = useState<'' | CurrencyCodes>('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [convertedAmount, setConvertedAmount] = useState('');
+  const { trackConversion } = useAnalytics();
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!amount || parseFloat(amount) <= 0 || isNaN(parseFloat(amount))) {
+    if (!amount || isNaN(Number(amount))) {
       newErrors.amount = 'Please enter a valid amount';
     }
     if (!fromCurrency) {
@@ -31,6 +42,13 @@ function App() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const fetchConversion = async (): Promise<ConvertResponse> => {
+    const URL = `${process.env.REACT_APP_API_URL}/convert?from=${fromCurrency}&to=${toCurrency}&amount=${amount}`;
+    const response = await fetch(URL);
+    if (!response.ok) throw new Error('Conversion failed');
+    return response.json();
   };
 
   // DON'T FORGET TO KEEP IT SIMPLE FIRST, BEFORE REFACTORING
@@ -47,24 +65,12 @@ function App() {
       const response = await fetch(URL);
       if (!response.ok) {
         // handle this - maybe with a toast?
-        // throw new Error('Server error occured')
+        // throw new Error('Server error occ wured')
       }
       const json: ConvertResponse = await response.json();
       const convertedAmountValue = Number(json.convertedAmount).toLocaleString('en-GB', { maximumFractionDigits: 2 });
       setConvertedAmount(convertedAmountValue);
-
-      // Fire Google Tag Manager event
-      if (window.gtag) {
-        console.log('google');
-        window.gtag('event', 'ConvertButton', {
-          event_category: 'CurrencyConverter',
-          event_label: 'ConvertButton',
-          currency_from: fromCurrency,
-          currency_to: toCurrency,
-          amount: amount,
-          converted_amount: json.convertedAmount,
-        });
-      }
+      trackConversion({ from: fromCurrency, to: toCurrency, amount: amount, convertedAmount: convertedAmountValue });
     } catch (error) {
       // Handle error
     } finally {
@@ -72,9 +78,28 @@ function App() {
     }
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const clearFieldErrors = (fieldName: string) => {
+    setErrors((prev) => {
+      const { [fieldName]: removed, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    convertAmount();
+    if (!validateForm()) {
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const data = await fetchConversion();
+      const convertedAmountValue = Number(data.convertedAmount).toLocaleString('en-GB', { maximumFractionDigits: 2 });
+      setConvertedAmount(convertedAmountValue);
+      trackConversion({ from: fromCurrency, to: toCurrency, amount, convertedAmount: convertedAmountValue });
+    } catch (error) {
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -90,8 +115,7 @@ function App() {
             label="Amount"
             onChange={(value) => {
               // optional
-              const { amount, ...rest } = errors;
-              setErrors(rest);
+              clearFieldErrors('amount');
 
               setAmount(value);
             }}
@@ -101,9 +125,7 @@ function App() {
           <CurrencySelector
             label="From Currency"
             onChange={(value) => {
-              const { from, ...rest } = errors;
-              setErrors(rest);
-
+              clearFieldErrors('from');
               setFromCurrency(value);
             }}
             value={fromCurrency}
@@ -112,8 +134,7 @@ function App() {
           <CurrencySelector
             label="To Currency"
             onChange={(value) => {
-              const { to, ...rest } = errors;
-              setErrors(rest);
+              clearFieldErrors('to');
 
               setToCurrency(value);
             }}
@@ -138,6 +159,7 @@ const StyledHeader = styled.header`
   color: ${palette.white};
 `;
 
+// probably should be a 'main'
 const ContentContainer = styled.div`
   display: flex;
   justify-content: center;

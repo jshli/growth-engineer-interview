@@ -27,12 +27,7 @@ export type ConvertResponse = {
   from: keyof typeof Currencies;
   to: keyof typeof Currencies;
   amount: number;
-  convertedAmount: number;
+  convertedAmount: string;
 };
 
 // Global declarations for third-party libraries
-declare global {
-  interface Window {
-    gtag: (command: string, targetId: string, config?: Record<string, any>) => void;
-  }
-}
